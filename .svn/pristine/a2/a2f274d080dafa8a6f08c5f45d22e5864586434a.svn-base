@@ -1,0 +1,77 @@
+package com.fh.shop.api.member.biz;
+
+import com.alibaba.fastjson.JSONObject;
+import com.fh.shop.api.common.HardCode;
+import com.fh.shop.api.member.mapper.IMemberMapper;
+import com.fh.shop.api.member.po.Member;
+import com.fh.shop.api.member.vo.MemberVo;
+import com.fh.shop.api.product.common.ResponseEnum;
+import com.fh.shop.api.product.common.ServerException;
+import com.fh.shop.api.util.Md5Util;
+import com.fh.shop.api.util.RedisAction;
+import com.fh.shop.api.util.RedisKey;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Base64;
+import java.util.UUID;
+
+@Service("memberServiceImpl")
+public class MemberServiceImpl implements IMemberService {
+
+    @Autowired
+    private IMemberMapper iMemberMapper;
+
+    //判断会员是否存在
+    public String queryName(String name) {
+        String str = iMemberMapper.queryName(name);
+        return str;
+    }
+
+    //注册会员
+    public void saveMember(Member member) {
+        //生成salt盐
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        //M5进行加密
+        member.setPasswd(Md5Util.md5(Md5Util.md5(member.getPasswd())+uuid));
+        //设置salt盐
+        member.setSalt(uuid);
+        iMemberMapper.saveMember(member);
+    }
+
+    //登录验证
+    public ServerException login(String memberName , String password) {
+        //验证会员名和密码不能为空
+        if (StringUtils.isEmpty(memberName) || StringUtils.isEmpty(password)){
+            //如果为空返回前台 , 并给予提示
+            return ServerException.serverException(ResponseEnum.MEMBER_NOTEMPTY);
+        }
+        //查询会员名是否存在
+        Member member = iMemberMapper.login(memberName);
+        //判断会员名是否存在
+        if (member == null){
+            //会员名不存在 , 给予提示
+            return ServerException.serverException(ResponseEnum.MEMBERNAME_ERROR);
+        }
+        //判断会员密码是否正确
+        if (!Md5Util.md5(password+member.getSalt()).equals(member.getPasswd())){
+            //密码不正确 , 给予提示
+            return ServerException.serverException(ResponseEnum.MEMBERPASSWD_ERROR);
+        }
+        MemberVo memberVo = new MemberVo();
+        memberVo.setId(member.getId());
+        memberVo.setName(member.getName());
+        memberVo.setRealName(member.getRealName());
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        memberVo.setUuid(uuid);
+        String str = JSONObject.toJSONString(memberVo);
+        //64位编码
+        String base64 = Base64.getEncoder().encodeToString(str.getBytes());
+        //生成签名 , 秘钥是关键
+        String secret = Base64.getEncoder().encodeToString(Md5Util.sign(base64, HardCode.SECRET).getBytes());
+        //登录成功设置过期时间
+        RedisAction.setex(RedisKey.redisKey(member.getName() , uuid) , "1" , HardCode.EXPIRE_SECONDS);
+        return ServerException.serverException(base64+"."+secret);
+    }
+}

@@ -1,0 +1,25 @@
+package com.fh.shop.xyy.common;
+
+
+import javax.servlet.http.HttpServletRequest;
+
+public class ThreadLocalSession {
+
+    //因为普通的java类无法创建HttpServletRequest,所以需要用到ThreadLocal技术,创建线程
+    private static ThreadLocal<HttpServletRequest> threadLocal = new ThreadLocal();
+
+    //ThreadLocal进行赋值
+    public static void setRequest(HttpServletRequest request){
+        threadLocal.set(request);
+    }
+
+    //调用方法时,获取request
+    public static HttpServletRequest getRequest(){
+        return threadLocal.get();
+    }
+
+    //执行完毕后,清除request
+    public static void removeRequest(){
+        threadLocal.remove();
+    }
+}

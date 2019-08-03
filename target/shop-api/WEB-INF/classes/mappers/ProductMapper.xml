@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.api.product.mapper.IProductMapper" >
+
+    <select id="queryProductList" parameterType="java.lang.Integer" resultType="com.fh.shop.api.product.po.Product">
+        select id,name,price,photoName from t_shop ts left join t_brand tb
+        on ts.brandid = tb.b_id
+        where ts.hotSell = 1 and ts.status = 1
+        <if test="id != null and id != ''">
+            and ts.brandid = #{id}
+        </if>
+        order by id desc
+    </select>
+</mapper>

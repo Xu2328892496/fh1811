@@ -1,0 +1,156 @@
+package com.fh.shop.api.interceptor;
+
+import com.alibaba.fastjson.JSONObject;
+import com.fh.shop.api.annotation.HeaderAnnotation;
+import com.fh.shop.api.common.GlobalException;
+import com.fh.shop.api.common.HardCode;
+import com.fh.shop.api.member.vo.MemberVo;
+import com.fh.shop.api.product.common.ResponseEnum;
+import com.fh.shop.api.util.Md5Util;
+import com.fh.shop.api.util.RedisAction;
+import com.fh.shop.api.util.RedisKey;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Method;
+import java.util.Base64;
+
+public class Interceptor extends HandlerInterceptorAdapter {
+
+//    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Base64DecodingException {
+//        //解决发送请求跨域问题
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS , "get,post,options");
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS , "x-author");
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN , "*");
+//        //获取请求方法的类型
+//        String type = request.getMethod();
+//        if (type.equalsIgnoreCase("options")){
+//            return false;
+//        }
+//        //通过自定义注解 , 判断是否有该注解 , 有拦截 , 没有放过
+//        HandlerMethod annotation = (HandlerMethod)handler;
+//        if (!annotation.hasMethodAnnotation(HeaderAnnotation.class)){
+//            return true;
+//        }
+//        //获取头信息
+//        String header = request.getHeader("x-author");
+//        //判断头信息是否存在
+//        if (StringUtil.isEmpty(header) || header.equalsIgnoreCase("undefined")){
+//            throw new GlobalException(ResponseEnum.HEADER_INEXISTENCE);
+//        }
+//        //判断是否被篡改
+//        String[] split = header.split("\\.");
+//        //获取会员信息base64
+//        String memberBase64 = split[0];
+//        String signBase64 = split[1];
+//        String encode = Base64.encode(Md5Util.sign(memberBase64, HardCode.SECRET).getBytes());
+//        if (!encode.equals(signBase64)){
+//            throw new GlobalException(ResponseEnum.HEADER_TAMPER);
+//        }
+//        //获取信息
+//        byte[] decode = Base64.decode(memberBase64);
+//        String str = new String(decode);
+//        MemberVo memberVo = JSONObject.parseObject(str , MemberVo.class);
+//        request.setAttribute("memberVo" , memberVo);
+//        return true;
+
+//        //ajax请求涉及到了跨域问题 , 这里我们通过配置Filter解决
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS , "get,post,put,delete,options");
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS , "x-author");
+//        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN , "http://192.168.124.24:8082");
+//        //beforesend首先会发送options类型的请求 , 在发送ajax的get请求 , 排除option请求
+//        String type = request.getMethod();
+//        //如果请求为options类型 , 阻止执行
+//        if (type.equalsIgnoreCase("options")){
+//            return false;
+//        }
+//        //判断请求方法是否有自定义注解 , 反其道而行 , 存在的不放行
+//        HandlerMethod handlerMethod = (HandlerMethod) handler;
+//        //获取handlerMethod里面的getMethod方法 , 进行注解判断
+//        Method method = handlerMethod.getMethod();
+//        //没有该注解的方法 , 正常执行
+//        if (!method.isAnnotationPresent(HeaderAnnotation.class)){
+//            return true;
+//        }
+//        //获取头部信息
+//        String header = request.getHeader("x-author");
+//        //判断头部信息是否存在 , 不登录时有时头信息为undefined
+//        if (StringUtil.isEmpty(header) || header.equalsIgnoreCase("undefined")){
+//            throw new GlobalException(ResponseEnum.HEADER_INEXISTENCE);
+//        }
+//        //判断信息是否被篡改 , .为特殊符号 , 所以通过\\进行转译
+//        String[] split = header.split("\\.");
+//        String str1 = split[0];
+//        String str2 = split[1];
+//        //验证签名 , 秘钥是关键
+//        String encode = Base64.encode(Md5Util.sign(str1, HardCode.SECRET).getBytes());
+//        if (!str2.equals(encode)){
+//            throw new GlobalException(ResponseEnum.HEADER_TAMPER);
+//        }
+//        //获取信息 , 字节数组
+//        byte[] decode = Base64.decode(str1);
+//        //将字节数组转换为json格式的字符串
+//        String string = new String(decode);
+//        //将json格式的字符串转换为java对象
+//        MemberVo memberVo = JSONObject.parseObject(string, MemberVo.class);
+//        //将java对象 , 存放在Attribute中h
+//        request.setAttribute("memberVo" , memberVo);
+//        return true;
+//    }
+
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
+        //解决ajax跨域问题
+        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS ,"get,post,delete,put,options");
+        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS , "x-author");
+        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN , "*");
+        //beforeSend会在之前先发送一个options请求 , 所以我们要对options进行拦截
+        String type = request.getMethod();
+        if (type.equalsIgnoreCase("options")){
+            return false;
+        }
+        //通过自定义注解 , 判断方法上是否有自定义注解 
+        HandlerMethod handlerMethod = (HandlerMethod) handler;
+        Method method = handlerMethod.getMethod();
+        //判断是否存在该注解
+        if (!method.isAnnotationPresent(HeaderAnnotation.class)){
+            return true;
+        }
+        //获取头部信息
+        String header = request.getHeader("x-author");
+        //判断头信息是否为空 , 在不登录的情况下会出现undefined
+        if (StringUtils.isEmpty(header)){
+            throw new GlobalException(ResponseEnum.HEADER_INEXISTENCE);
+        }
+        //判断会员信息是否被篡改
+        String[] split = header.split("\\.");
+        String str1 = split[0];
+        String str2 = split[1];
+        //签名验证 , 会员信息是否被篡改
+        String string = Base64.getEncoder().encodeToString(Md5Util.sign(str1, HardCode.SECRET).getBytes());
+        if (!string.equals(str2)){
+            throw new GlobalException(ResponseEnum.HEADER_TAMPER);
+        }
+        //获取会员信息 , 将信息转换为字节数组
+        byte[] decode = Base64.getDecoder().decode(str1);
+        //字符串支持将字节数组 , 转换为字符串
+        String str = new String(decode);
+        //将字符串转换为java对象
+        MemberVo memberVo = JSONObject.parseObject(str, MemberVo.class);
+        String name = memberVo.getName();
+        String uuid = memberVo.getUuid();
+        //判断缓存中的登录信息是否过期
+        boolean exist = RedisAction.exist(RedisKey.redisKey(name , uuid));
+        if (!exist){
+            throw new GlobalException(ResponseEnum.LOGIN_TIMEOUT);
+        }
+        //为redis会员续命
+        RedisAction.expire(RedisKey.redisKey(name , uuid) , HardCode.EXPIRE_SECONDS);
+        //将java对象存放在request中
+        request.setAttribute(HardCode.MEMBERVO , memberVo);
+        return true;
+    }
+}

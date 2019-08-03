@@ -1,0 +1,37 @@
+package com.fh.shop.api.product.common;
+
+public enum ResponseEnum {
+
+    SUCCESS(200 , "成功"),
+
+    MEMBER_EXIST(401 , "会员名已存在"),
+
+    MEMBER_NOTEMPTY(1000 , "会员名或密码不能为空"),
+
+    MEMBERNAME_ERROR(1001 , "会员名不正确"),
+
+    MEMBERPASSWD_ERROR(1002 , "密码不正确"),
+
+    HEADER_INEXISTENCE(2001 , "header头信息不存在"),
+
+    HEADER_TAMPER(2002 , "header头信息被篡改"),
+
+    LOGIN_TIMEOUT(2003 , "连接超时");
+
+    private int code;
+
+    private String message;
+
+    private ResponseEnum(int code,String message){
+        this.code = code;
+        this.message = message;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+}

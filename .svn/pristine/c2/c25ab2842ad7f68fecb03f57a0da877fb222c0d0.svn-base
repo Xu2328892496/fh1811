@@ -1,0 +1,39 @@
+package com.fh.shop.api.util;
+
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
+public class RedisPool {
+
+    private static JedisPool jedisPool = null;
+
+    //创建redis连接池 , 使用redis创建的连接 , 减少与redis的连接 , 提高性能
+    private static void redisPool(){
+        //创建连接池的配置
+        JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+        //设置最大连接数
+        jedisPoolConfig.setMaxTotal(1000);
+        //设置空闲时间最小连接数
+        jedisPoolConfig.setMinIdle(100);
+        //设置空闲时间最大连接数
+        jedisPoolConfig.setMaxIdle(100);
+        //测试得到的实例是否可用
+        jedisPoolConfig.setTestOnBorrow(true);
+        //测试返回的实例是否可用
+        jedisPoolConfig.setTestOnReturn(true);
+        //创建redis的连接
+        jedisPool = new JedisPool("192.168.124.3" , 7020);
+    }
+
+    //redis连接池只需加载一次就可以
+    static {
+        redisPool();
+    }
+
+    //获取redis连接中的方法
+    public static Jedis redisMethod(){
+        //获取redis缓存中的资源
+        return jedisPool.getResource();
+    }
+}

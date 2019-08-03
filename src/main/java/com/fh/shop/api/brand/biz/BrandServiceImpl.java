@@ -1,0 +1,53 @@
+package com.fh.shop.api.brand.biz;
+
+import com.alibaba.fastjson.JSONObject;
+import com.fh.shop.api.brand.mapper.IBrandMapper;
+import com.fh.shop.api.brand.po.Brand;
+import com.fh.shop.api.brand.vo.BrandVo;
+import com.fh.shop.api.common.HardCode;
+import com.fh.shop.api.product.common.ServerException;
+import com.fh.shop.jar.RedisAction;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service("brandServiceImpl")
+public class BrandServiceImpl implements IBrandService {
+
+    @Autowired
+    private IBrandMapper iBrandMapper;
+
+    //查询品牌列表
+    public ServerException queryBrandList() {
+        //判断reids中是否有该缓存
+        String recommendBrand = RedisAction.get(HardCode.BRAND_LIST);
+        if (StringUtils.isNotEmpty(recommendBrand)){
+            List<BrandVo> brandVoList = JSONObject.parseArray(recommendBrand, BrandVo.class);
+            return ServerException.serverException(brandVoList);
+        }
+        //查询品牌列表
+        List<Brand> brandList = iBrandMapper.queryBrandList();
+        //提高新能 , 减少传输的字段 , po转vo
+        List<BrandVo> brandVoList = buildBrandVo(brandList);
+        //转换成String类型
+        String brand = JSONObject.toJSONString(brandVoList);
+        //将查询到的数据存放缓存中
+        RedisAction.setex(HardCode.BRAND_LIST , brand , 30*60);
+        return ServerException.serverException(brandVoList);
+    }
+
+    private List<BrandVo> buildBrandVo(List<Brand> brandList) {
+        List<BrandVo> brandVoList = new ArrayList<BrandVo>();
+        for (Brand brand : brandList) {
+            BrandVo brandVo = new BrandVo();
+            brandVo.setB_id(brand.getB_id());
+            brandVo.setB_name(brand.getB_name());
+            brandVo.setB_photo(brand.getB_photo());
+            brandVoList.add(brandVo);
+        }
+        return brandVoList;
+    }
+}

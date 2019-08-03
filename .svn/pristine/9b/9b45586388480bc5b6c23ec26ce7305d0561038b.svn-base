@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fh.shop.api.brand.mapper.IBrandMapper" >
+
+    <!-- 查询品牌 -->
+    <select id="queryBrandList" resultType="com.fh.shop.api.brand.po.Brand">
+        select b_id,b_name,b_photo from t_brand where b_recommend = 1
+        order by b_sort
+    </select>
+
+</mapper>

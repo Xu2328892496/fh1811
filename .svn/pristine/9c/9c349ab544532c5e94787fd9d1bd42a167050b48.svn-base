@@ -1,0 +1,105 @@
+package com.fh.shop.api.util;
+
+import redis.clients.jedis.Jedis;
+
+public class RedisAction {
+
+    //创建设置缓存的方法
+    public static void set(String key , String value){
+        //获取redis中的方法
+        Jedis jedis = null;
+        try {
+            jedis = RedisPool.redisMethod();
+            jedis.set(key , value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally {
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+    }
+
+    //获取redis缓存的方法
+    public static String get(String key){
+        Jedis jedis = null;
+        String str = null;
+        try {
+            //获取redis中的方法
+            jedis = RedisPool.redisMethod();
+            str = jedis.get(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally{
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+        return str;
+    }
+
+    //删除redis缓存方法
+    public static void del(String key){
+        Jedis jedis = null;
+        try {
+            jedis = RedisPool.redisMethod();
+            jedis.del(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally{
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+    }
+
+    //设置生存时间
+    public static void setex(String key , String value , Integer seconds){
+        Jedis jedis = null;
+        try {
+            jedis = RedisPool.redisMethod();
+            jedis.setex(key , seconds , value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally {
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+    }
+
+    //判断是否存活
+    public static boolean exist(String key){
+        Jedis jedis = null;
+        try {
+            jedis = RedisPool.redisMethod();
+            return jedis.exists(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally{
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+    }
+
+    //续命
+    public static void expire(String key , int seconds){
+        Jedis jedis = null;
+        try {
+            jedis = RedisPool.redisMethod();
+            jedis.expire(key , seconds);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally{
+            if (jedis != null){
+                jedis.close();
+            }
+        }
+    }
+}

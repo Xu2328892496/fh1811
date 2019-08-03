@@ -1,0 +1,6 @@
+jdbc.url=jdbc:mysql://192.168.124.3:3306/tastdb?useUnicode=true&amp;characterEncoding=utf8
+jdbc.driverClassName=com.mysql.jdbc.Driver
+jdbc.username=xyy
+jdbc.password=123
+jdbc.maxActive=1000
+jdbc.maxWait=300

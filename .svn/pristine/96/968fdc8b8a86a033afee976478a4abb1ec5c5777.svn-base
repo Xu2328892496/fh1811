@@ -1,0 +1,88 @@
+package com.fh.shop.api.sms.biz;
+
+import com.alibaba.fastjson.JSONObject;
+import com.fh.shop.api.common.HardCode;
+import com.fh.shop.api.product.common.ResponseEnum;
+import com.fh.shop.api.product.common.ServerException;
+import com.fh.shop.api.sms.vo.SmsCode;
+import com.fh.shop.api.util.CheckSumBuilder;
+import com.fh.shop.api.util.HttpClientUtil;
+import com.fh.shop.api.util.RedisAction;
+import com.fh.shop.api.util.RedisKey;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Service("smsServiceImpl")
+public class SmsServiceImpl implements ISmsService {
+
+    @Value("${sms.test.url}")
+    private String url;
+    @Value("${sms.test.AppKey}")
+    private String AppKey;
+    @Value("${sms.test.AppSecret}")
+    private String AppSecret;
+    @Value("${sms.test.templateid}")
+    private String templateid;
+
+    //发送短信
+    public ServerException sendSms(String phone) {
+        //手机号的非空验证
+        if (StringUtils.isEmpty(phone)){
+            return ServerException.serverException(ResponseEnum.SMS_PHONE_IS_EMPTY);
+        }
+        //手机号长度为11位
+        if (phone.length() != HardCode.SMS_PHONE_LENGTH){
+            return ServerException.serverException(ResponseEnum.SMS_PHONE_LENGTH_ERROR);
+        }
+        //手机的正则验证
+        Pattern pattern = Pattern.compile("^[1][3-8]+\\d{9}$");
+        Matcher matcher = pattern.matcher(phone);
+        if (!matcher.matches()){
+            return ServerException.serverException(ResponseEnum.SMS_PHONE_ERROR);
+        }
+        //判断验证是否过期
+        boolean exist = RedisAction.exist(RedisKey.smsCode(phone));
+        if (exist){
+            return ServerException.serverException(ResponseEnum.SMS_CODE_ITERATE);
+        }
+        //发送短信
+        Map<String, String> parameter = buildParameter(phone);
+        Map<String, String> head = buildHeader();
+        String str = HttpClientUtil.HttpClientUtil(url, parameter, head);
+        //将返回的json格式的字符串转换为java对象
+        SmsCode smsCode = JSONObject.parseObject(str, SmsCode.class);
+        //判断调用网易云信接口是否成功
+        if (smsCode.getCode() != HardCode.SMS_RESULT_CODE){
+            return ServerException.serverException(ResponseEnum.SMS_RESULT_CODE_ERROR);
+        }
+        //将手机号当做key , 验证码当value , 存放redis中并设置存活时间
+        RedisAction.setex(RedisKey.smsCode(phone) , smsCode.getObj() , HardCode.SMS_CODE_LIFE_TIME);
+        return ServerException.serverException();
+    }
+
+    private Map<String, String> buildHeader() {
+        Map<String , String> head = new HashMap();
+        head.put("AppKey" , AppKey);
+        String uuid = UUID.randomUUID().toString();
+        head.put("Nonce" , uuid);
+        String time = new Date().getTime() + "";
+        head.put("CurTime" , time);
+        head.put("CheckSum" , CheckSumBuilder.getCheckSum( AppSecret, uuid , time));
+        return head;
+    }
+
+    private Map<String, String> buildParameter(String phone) {
+        Map<String , String> parameter = new HashMap();
+        parameter.put("mobile" , phone);
+        parameter.put("templateid" , templateid);
+        return parameter;
+    }
+}
